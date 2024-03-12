@@ -9,7 +9,7 @@ import facefusion.globals
 import facefusion.processors.frame.core as frame_processors
 from facefusion import config, logger, wording
 from facefusion.face_analyser import get_many_faces, clear_face_analyser, find_similar_faces, get_one_face
-from facefusion.face_masker import create_static_box_mask, create_occlusion_mask, clear_face_occluder
+from facefusion.face_masker import create_static_box_mask, create_occlusion_mask, create_depth_mask, clear_face_occluder, clear_depth_estimator
 from facefusion.face_helper import warp_face_by_face_landmark_5, paste_back
 from facefusion.execution_helper import apply_execution_provider_options
 from facefusion.content_analyser import clear_content_analyser
@@ -164,6 +164,7 @@ def post_process() -> None:
 		clear_face_analyser()
 		clear_content_analyser()
 		clear_face_occluder()
+		clear_depth_estimator()
 
 
 def enhance_face(target_face: Face, temp_vision_frame : VisionFrame) -> VisionFrame:
@@ -178,6 +179,9 @@ def enhance_face(target_face: Face, temp_vision_frame : VisionFrame) -> VisionFr
 
 	if 'occlusion' in facefusion.globals.face_mask_types:
 		occlusion_mask = create_occlusion_mask(crop_vision_frame)
+		crop_mask_list.append(occlusion_mask)
+	if 'front-occlusion' in facefusion.globals.face_mask_types:
+		occlusion_mask = create_depth_mask(crop_vision_frame)
 		crop_mask_list.append(occlusion_mask)
 	crop_vision_frame = prepare_crop_frame(crop_vision_frame)
 	crop_vision_frame = apply_enhance(crop_vision_frame)

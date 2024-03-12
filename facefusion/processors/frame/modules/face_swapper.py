@@ -11,7 +11,7 @@ import facefusion.processors.frame.core as frame_processors
 from facefusion import config, logger, wording
 from facefusion.execution_helper import apply_execution_provider_options
 from facefusion.face_analyser import get_one_face, get_average_face, get_many_faces, find_similar_faces, clear_face_analyser
-from facefusion.face_masker import create_static_box_mask, create_occlusion_mask, create_region_mask, clear_face_occluder, clear_face_parser
+from facefusion.face_masker import create_static_box_mask, create_occlusion_mask, create_depth_mask, create_region_mask, clear_face_occluder, clear_depth_estimator, clear_face_parser
 from facefusion.face_helper import warp_face_by_face_landmark_5, paste_back
 from facefusion.face_store import get_reference_faces
 from facefusion.content_analyser import clear_content_analyser
@@ -213,6 +213,7 @@ def post_process() -> None:
 		clear_content_analyser()
 		clear_face_occluder()
 		clear_face_parser()
+		clear_depth_estimator()
 
 
 def swap_face(source_face : Face, target_face : Face, temp_vision_frame : VisionFrame) -> VisionFrame:
@@ -227,6 +228,9 @@ def swap_face(source_face : Face, target_face : Face, temp_vision_frame : Vision
 	if 'occlusion' in facefusion.globals.face_mask_types:
 		occlusion_mask = create_occlusion_mask(crop_vision_frame)
 		crop_mask_list.append(occlusion_mask)
+	if 'front-occlusion' in facefusion.globals.face_mask_types:
+		depth_mask = create_depth_mask(crop_vision_frame)
+		crop_mask_list.append(depth_mask)
 	crop_vision_frame = prepare_crop_frame(crop_vision_frame)
 	crop_vision_frame = apply_swap(source_face, crop_vision_frame)
 	crop_vision_frame = normalize_crop_frame(crop_vision_frame)
