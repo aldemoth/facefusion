@@ -11,7 +11,9 @@ from facefusion.typing import FaceLandmark68, VisionFrame, Mask, Padding, FaceMa
 from facefusion.execution import apply_execution_provider_options
 from facefusion.filesystem import resolve_relative_path
 from facefusion.download import conditional_download
+from facefusion.depth_estimator_transform import load_image
 
+DEPTH_ESTIMATOR = None
 FACE_OCCLUDER = None
 FACE_PARSER = None
 THREAD_LOCK : threading.Lock = threading.Lock()
@@ -26,6 +28,11 @@ MODELS : ModelSet =\
 	{
 		'url': 'https://github.com/facefusion/facefusion-assets/releases/download/models/face_parser.onnx',
 		'path': resolve_relative_path('../.assets/models/face_parser.onnx')
+	},
+	'depth_estimator':
+	{
+		'url': 'https://github.com/facefusion/facefusion-assets/releases/download/models/face_parser.onnx',
+		'path': resolve_relative_path('../.assets/models/depth_anything_vits14.onnx')
 	}
 }
 FACE_MASK_REGIONS : Dict[FaceMaskRegion, int] =\
@@ -53,6 +60,16 @@ def get_face_occluder() -> Any:
 	return FACE_OCCLUDER
 
 
+def get_depth_estimator() -> Any:
+	global DEPTH_ESTIMATOR
+
+	with THREAD_LOCK:
+		if DEPTH_ESTIMATOR is None:
+			model_path = MODELS.get('depth_estimator').get('path')
+			DEPTH_ESTIMATOR = onnxruntime.InferenceSession(model_path, providers = apply_execution_provider_options(facefusion.globals.execution_providers))
+	return DEPTH_ESTIMATOR
+
+
 def get_face_parser() -> Any:
 	global FACE_PARSER
 
@@ -67,6 +84,12 @@ def clear_face_occluder() -> None:
 	global FACE_OCCLUDER
 
 	FACE_OCCLUDER = None
+
+
+def clear_depth_estimator() -> None:
+	global DEPTH_ESTIMATOR
+
+	DEPTH_ESTIMATOR = None
 
 
 def clear_face_parser() -> None:
@@ -114,6 +137,22 @@ def create_occlusion_mask(crop_vision_frame : VisionFrame) -> Mask:
 	occlusion_mask = cv2.resize(occlusion_mask, crop_vision_frame.shape[:2][::-1])
 	occlusion_mask = (cv2.GaussianBlur(occlusion_mask.clip(0, 1), (0, 0), 5).clip(0.5, 1) - 0.5) * 2
 	return occlusion_mask
+
+
+def create_depth_mask(crop_vision_frame : VisionFrame) -> Mask:
+	image, (orig_h, orig_w) = load_image(crop_vision_frame)
+	depth_estimator = get_depth_estimator()
+	depth_mask = depth_estimator.run(None, {"image": image})[0]
+	depth_mask = cv2.resize(depth_mask[0, 0], (orig_w, orig_h))
+	depth_mask = (depth_mask - depth_mask.min()) / (depth_mask.max() - depth_mask.min())
+	
+	occlusion_mask = create_occlusion_mask(crop_vision_frame)  
+	occlusion_mask_depth = depth_mask * cv2.threshold(occlusion_mask, 200/255.0, 1.0, cv2.THRESH_BINARY)[1] # depth map cropped to occlusion mask area
+	occlusion_mask_depth = cv2.inpaint(occlusion_mask_depth, ((cv2.threshold(occlusion_mask, 200/255.0, 1.0, cv2.THRESH_BINARY_INV)[1]) * 255).astype(numpy.uint8), 8, flags=cv2.INPAINT_NS) # extend cropped map to borders
+	depth_mask = (occlusion_mask_depth > depth_mask) # don't mask when occluded area is behind the face 
+	depth_mask = occlusion_mask + depth_mask 
+	
+	return depth_mask
 
 
 def create_region_mask(crop_vision_frame : VisionFrame, face_mask_regions : List[FaceMaskRegion]) -> Mask:

@@ -65,7 +65,7 @@ face selector:
   --reference-frame-number REFERENCE_FRAME_NUMBER                                                                        specify the frame used to create the reference face
 
 face mask:
-  --face-mask-types FACE_MASK_TYPES [FACE_MASK_TYPES ...]                                                                mix and match different face mask types (choices: box, occlusion, region)
+  --face-mask-types FACE_MASK_TYPES [FACE_MASK_TYPES ...]                                                                mix and match different face mask types (choices: box, occlusion, front-occlusion, region)
   --face-mask-blur [0.0-1.0]                                                                                             specify the degree of blur applied the box mask
   --face-mask-padding FACE_MASK_PADDING [FACE_MASK_PADDING ...]                                                          apply top, right, bottom and left padding to the box mask
   --face-mask-regions FACE_MASK_REGIONS [FACE_MASK_REGIONS ...]                                                          choose the facial features used for the region mask (choices: skin, left-eyebrow, right-eyebrow, left-eye, right-eye, eye-glasses, nose, mouth, upper-lip, lower-lip)
