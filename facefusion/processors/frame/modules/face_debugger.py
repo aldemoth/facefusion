@@ -7,7 +7,8 @@ import facefusion.globals
 import facefusion.processors.frame.core as frame_processors
 from facefusion import config, process_manager, wording
 from facefusion.face_analyser import get_one_face, get_many_faces, find_similar_faces, clear_face_analyser
-from facefusion.face_masker import create_static_box_mask, create_occlusion_mask, create_region_mask, clear_face_occluder, clear_face_parser
+from facefusion.face_masker import create_static_box_mask, create_occlusion_mask, create_region_mask \
+	clear_face_occluder, clear_face_parser, create_depth_mask, clear_depth_estimator
 from facefusion.face_helper import warp_face_by_face_landmark_5, categorize_age, categorize_gender
 from facefusion.face_store import get_reference_faces
 from facefusion.content_analyser import clear_content_analyser
@@ -65,6 +66,7 @@ def post_process() -> None:
 		clear_content_analyser()
 		clear_face_occluder()
 		clear_face_parser()
+		clear_depth_estimator()
 
 
 def debug_face(target_face : Face, temp_vision_frame : VisionFrame) -> VisionFrame:
@@ -88,6 +90,9 @@ def debug_face(target_face : Face, temp_vision_frame : VisionFrame) -> VisionFra
 		if 'occlusion' in facefusion.globals.face_mask_types:
 			occlusion_mask = create_occlusion_mask(crop_vision_frame)
 			crop_mask_list.append(occlusion_mask)
+		if 'front-occlusion' in facefusion.globals.face_mask_types:
+			front_occlusion_mask = create_depth_mask(crop_vision_frame)
+			crop_mask_list.append(front_occlusion_mask)
 		if 'region' in facefusion.globals.face_mask_types:
 			region_mask = create_region_mask(crop_vision_frame, facefusion.globals.face_mask_regions)
 			crop_mask_list.append(region_mask)
