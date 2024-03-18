@@ -31,7 +31,7 @@ MODELS : ModelSet =\
 	},
 	'depth_estimator':
 	{
-		'url': 'https://github.com/facefusion/facefusion-assets/releases/download/models/face_parser.onnx',
+		'url': 'https://github.com/fabio-sim/Depth-Anything-ONNX/releases/download/v1.0.0/depth_anything_vits14.onnx',
 		'path': resolve_relative_path('../.assets/models/depth_anything_vits14.onnx')
 	}
 }
@@ -105,6 +105,7 @@ def pre_check() -> bool:
 		[
 			MODELS.get('face_occluder').get('url'),
 			MODELS.get('face_parser').get('url'),
+			MODELS.get('depth_estimator').get('url')
 		]
 		conditional_download(download_directory_path, model_urls)
 	return True
@@ -145,13 +146,13 @@ def create_depth_mask(crop_vision_frame : VisionFrame) -> Mask:
 	depth_mask = depth_estimator.run(None, {"image": image})[0]
 	depth_mask = cv2.resize(depth_mask[0, 0], (orig_w, orig_h))
 	depth_mask = (depth_mask - depth_mask.min()) / (depth_mask.max() - depth_mask.min())
-	
+
 	occlusion_mask = create_occlusion_mask(crop_vision_frame)  
 	occlusion_mask_depth = depth_mask * cv2.threshold(occlusion_mask, 200/255.0, 1.0, cv2.THRESH_BINARY)[1] # depth map cropped to occlusion mask area
 	occlusion_mask_depth = cv2.inpaint(occlusion_mask_depth, ((cv2.threshold(occlusion_mask, 200/255.0, 1.0, cv2.THRESH_BINARY_INV)[1]) * 255).astype(numpy.uint8), 8, flags=cv2.INPAINT_NS) # extend cropped map to borders
 	depth_mask = (occlusion_mask_depth > depth_mask) # don't mask when occluded area is behind the face 
 	depth_mask = occlusion_mask + depth_mask 
-	
+
 	return depth_mask
 
 
